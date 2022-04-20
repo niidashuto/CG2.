@@ -198,7 +198,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		debugController->EnableDebugLayer();
 	}
 #endif // DEBUG
-	
+	//DirectInputの初期化
+	IDirectInput8* directInput = nullptr;
+	result = DirectInput8Create(
+		w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
+		(void**)&directInput, nullptr);
+	assert(SUCCEEDED(result));
+	//キーボードデバイスの生成
+	IDirectInputDevice8* keyboard = nullptr;
+	result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+	assert(SUCCEEDED(result));
+	//入力データ形式のセット
+	result = keyboard->SetDataFormat(&c_dfDIKeyboard);//標準形式
+	assert(SUCCEEDED(result));
+	//排他制御レベルのセット
+	result = keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+	assert(SUCCEEDED(result));
 	//頂点データ
 	XMFLOAT3 vertices[] = {
 		{-0.5f,-0.5f,0.0f},//左下
@@ -353,7 +368,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (msg.message == WM_QUIT) {
 			break;
 		}
+		float a = 0.1f;
+		float b = 0.25f;
+		float c = 0.5f;
+		float d = 0.0f;
 		//DirectX毎フレーム処理　ここから
+		//キーボード情報の取得
+		keyboard->Acquire();
+		//全キーの入力状態を取得する
+		BYTE key[256] = {};
+		keyboard->GetDeviceState(sizeof(key), key);
+		//数字の0キーが押されたら
+		if (key[DIK_0]) {
+			OutputDebugStringA("Hit 0\n");//出力ウィンドウに[Hit 0]と表示
+		}
+		if (key[DIK_SPACE])//スペースキーが押されたら 
+		{
+			b += 0.25f;
+			c -= 0.25f;
+		}
 		//バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 
@@ -369,12 +402,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		rtvHandle.ptr += bbIndex * device->GetDescriptorHandleIncrementSize(rtvHeapDesc.Type);
 		commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
 		//3.画面クリア
-		FLOAT clearColor[] = { 0.1f,0.25f,0.5f,0.0f };//青っぽい色
-		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+			FLOAT clearColor[] = { a,b,c,d };//青っぽい色
+			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		//4.描画コマンド　ここから
 		//ビューポート設定コマンド
 		D3D12_VIEWPORT viewport{};
-		viewport.Width = window_width;
+		viewport.Width = window_width/2;
 		viewport.Height = window_height;
 		viewport.TopLeftX = 0;
 		viewport.TopLeftY = 0;
@@ -386,7 +419,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3D12_RECT scissorRect{};
 		scissorRect.left = 0;//切り抜き座標左
 		scissorRect.right = scissorRect.left + window_width;//切り抜き座標右
-		scissorRect.top = 0;//切り抜き座標上
+		scissorRect.top = window_height/2;//切り抜き座標上
 		scissorRect.bottom = scissorRect.top + window_height;//切り抜き座標下
 		//シザー矩形設定コマンドを、コマンドリストに積む
 		commandList->RSSetScissorRects(1, &scissorRect);
