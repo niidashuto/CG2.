@@ -235,9 +235,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 	//頂点データ全体のサイズ=頂点データ一つ分のサイズ*頂点データの要素数
 	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
+
 	//頂点バッファの設定
 	D3D12_HEAP_PROPERTIES heapProp{};//ヒープ設定
 	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;//GPUへの転送用
+
 	//リソース設定
 	D3D12_RESOURCE_DESC resDesc{};
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -247,6 +249,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	resDesc.MipLevels = 1;
 	resDesc.SampleDesc.Count = 1;
 	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
 	//頂点バッファの生成
 	ID3D12Resource* vertBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -257,27 +260,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		nullptr,
 		IID_PPV_ARGS(&vertBuff));
 	assert(SUCCEEDED(result));
+
 	//GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	assert(SUCCEEDED(result));
+
 	//全頂点に対して
 	for (int i = 0; i < _countof(vertices); i++) {
 		vertMap[i] = vertices[i];//座標をコピー
 	}
+
 	//繋がりを解除
 	vertBuff->Unmap(0, nullptr);
+
 	//頂点バッファビューの作成
 	D3D12_VERTEX_BUFFER_VIEW vbView{};
+
 	//GPU仮想アドレス
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress();
+
 	//頂点バッファのサイズ
 	vbView.SizeInBytes = sizeVB;
+
 	//頂点一つ分のデータサイズ
 	vbView.StrideInBytes = sizeof(XMFLOAT3);
 	ID3DBlob* vsBlob = nullptr;//頂点シェーダオブジェクト
 	ID3DBlob* psBlob = nullptr;//ピクセルシェーダーオブジェクト
 	ID3DBlob* errorBlob = nullptr;//エラーオブジェクト
+
 	//頂点シェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
 		L"BasicVS.hlsl",//シェーダファイル名
@@ -287,6 +298,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,//デバッグ用設定
 		0,
 		&vsBlob, &errorBlob);
+
 	//エラーなら
 	if (FAILED(result)) {
 		//errorBlobからエラー内容をstring型にコピー
@@ -301,6 +313,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		OutputDebugStringA(error.c_str());
 		assert(0);
 	}
+
 	//ピクセルシェーダの読み込みとコンパイル
 	result = D3DCompileFromFile(
 		L"BasicPS.hlsl",//シェーダファイル名
@@ -310,6 +323,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,//デバッグ用設定
 		0,
 		&psBlob, &errorBlob);
+
 	//エラーなら
 	if (FAILED(result)) {
 		//errorBlobからエラー内容をstring型にコピー
@@ -324,23 +338,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		OutputDebugStringA(error.c_str());
 		assert(0);
 	}
+
 	//頂点レイアウト
 	D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
 		{"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0},
 	};
+
 	//グラフィックスパイプライン設定
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc{};
+
 	//シェーダーの設定
 	pipelineDesc.VS.pShaderBytecode = vsBlob->GetBufferPointer();
 	pipelineDesc.VS.BytecodeLength = vsBlob->GetBufferSize();
 	pipelineDesc.PS.pShaderBytecode = psBlob->GetBufferPointer();
 	pipelineDesc.PS.BytecodeLength = psBlob->GetBufferSize();
+
 	//サンプルマスクの設定
 	pipelineDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;//標準設定
+
 	//ラスタライザの設定
 	pipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;//カリングしない
 	pipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;//ポリゴン内塗りつぶし
 	pipelineDesc.RasterizerState.DepthClipEnable = true;//深度クリッピングを有効に
+
 	//ブレンドステート
 	//pipelineDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;//RBGA全てのチャンネルを描画
 	D3D12_RENDER_TARGET_BLEND_DESC& blenddesc = pipelineDesc.BlendState.RenderTarget[0];
@@ -362,28 +382,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	blenddesc.BlendOp = D3D12_BLEND_OP_ADD;//加算
 	blenddesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;//ソースのアルファ値
 	blenddesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;//1.0f-ソースのアルファ値
+
 	//頂点レイアウトの設定
 	pipelineDesc.InputLayout.pInputElementDescs = inputLayout;
 	pipelineDesc.InputLayout.NumElements = _countof(inputLayout);
+
 	//図形の形状設定
 	pipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
 	//その他の設定
 	pipelineDesc.NumRenderTargets = 1;//描画対象は一つ
 	pipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;//0~255指定のRGBA
 	pipelineDesc.SampleDesc.Count = 1;//1ピクセルにつき一回サンプリング
+
 	//ルートパラメータの設定
 	D3D12_ROOT_PARAMETER rootParam = {};
 	rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//定数バッファビュー
 	rootParam.Descriptor.ShaderRegister = 0;//定数バッファ番号
 	rootParam.Descriptor.RegisterSpace = 0;//デフォルト値
 	rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;//全てのシェーダから見える
+
 	//ルートシグネチャ
 	ID3D12RootSignature* rootSignature;
+
 	//ルートシグネチャの設定
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 	rootSignatureDesc.pParameters = &rootParam;//ルートパラメータの先頭アドレス
 	rootSignatureDesc.NumParameters = 1;//ルートパラメータ数
+
 	//シグネチャのシリアライズ
 	ID3D10Blob* rootSigBlob = nullptr;
 	result = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &errorBlob);
@@ -391,19 +418,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	result = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
 	assert(SUCCEEDED(result));
 	rootSigBlob->Release();
+
 	//パイプラインにルートシグネチャをセット
 	pipelineDesc.pRootSignature = rootSignature;
+
 	//パイプラインステートの生成
 	ID3D12PipelineState* pipelineState = nullptr;
 	result = device->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&pipelineState));
 	assert(SUCCEEDED(result));
+
 	//定数バッファ用データ構造体(マテリアル)
 	struct ConstBufferDataMaterial {
 		XMFLOAT4 color;//色(RGBA)
 	};
+
 	//ヒープ設定
 	D3D12_HEAP_PROPERTIES cbHeapProp{};
 	cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;//GPUへの転送用
+
 	//リソース設定
 	D3D12_RESOURCE_DESC cbResourceDesc{};
 	cbResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -414,6 +446,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	cbResourceDesc.SampleDesc.Count = 1;
 	cbResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	ID3D12Resource* constBuffMaterial = nullptr;
+
 	//定数バッファの生成
 	result = device->CreateCommittedResource(
 		&cbHeapProp,//ヒープ設定
@@ -423,14 +456,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		nullptr,
 		IID_PPV_ARGS(&constBuffMaterial));
 	assert(SUCCEEDED(result));
+
 	//定数バッファのマッピング
 	ConstBufferDataMaterial* constMapMaterial = nullptr;
 	result = constBuffMaterial->Map(0, nullptr, (void**)&constMapMaterial);//マッピング
 	assert(SUCCEEDED(result));
+
 	//値を書き込むと自動的に転送される
 	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);
+
 	//インデックスデータ全体のサイズ
 	UINT sizeIB = static_cast<UINT>(sizeof(uint16_t) * _countof(indices));
+
 	//リソース設定
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	resDesc.Width = sizeIB;//インデックスの情報が入る分のサイズ
@@ -439,6 +476,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	resDesc.MipLevels = 1;
 	resDesc.SampleDesc.Count = 1;
 	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
 	//インデックスバッファの生成
 	ID3D12Resource* indexBuff = nullptr;
 	result = device->CreateCommittedResource(
@@ -448,15 +486,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&indexBuff));
+
 	//インデックスバッファをマッピング
 	uint16_t* indexMap = nullptr;
 	result = indexBuff->Map(0, nullptr, (void**)&indexMap);
+
 	//全インデックスに対して
 	for (int i = 0; i < _countof(indices); i++) {
 		indexMap[i] = indices[i];//インデックスをコピー
 	}
+
 	//マッピング解除
 	indexBuff->Unmap(0, nullptr);
+
 	//インデックスバッファビューの生成
 	D3D12_INDEX_BUFFER_VIEW ibView{};
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
@@ -477,9 +519,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//DirectX毎フレーム処理　ここから
 		//キーボード情報の取得
 		keyboard->Acquire();
+
 		//全キーの入力状態を取得する
 		BYTE key[256] = {};
 		keyboard->GetDeviceState(sizeof(key), key);
+
 		//数字の0キーが押されたら
 		if (key[DIK_0]) {
 			OutputDebugStringA("Hit 0\n");//出力ウィンドウに[Hit 0]と表示
@@ -494,14 +538,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT; //表示状態から 
 		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET; //描画状態へ
 		commandList->ResourceBarrier(1, &barrierDesc);
+
 		//2.描画先の変更
 		//レンダーターゲットビューのハンドルを取得
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
 		rtvHandle.ptr += bbIndex * device->GetDescriptorHandleIncrementSize(rtvHeapDesc.Type);
 		commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+
 		//3.画面クリア
 			FLOAT clearColor[] = { 0.1f,0.25f,0.5f,0.0f };//青っぽい色
 			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
 		//4.描画コマンド　ここから
 		//ビューポート設定コマンド
 		D3D12_VIEWPORT viewport{};
@@ -542,14 +589,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//インデックスバッファビューの設定コマンド
 		commandList->IASetIndexBuffer(&ibView);
+
 		//定数バッファビュー(CBV)の設定コマンド
 		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
 		
 		//描画コマンド
 		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0,0);//全ての頂点を使って描画
+
 		//命令のクローズ
 		result = commandList->Close();
 		assert(SUCCEEDED(result));
+
 		//コマンドリストの実行
 		ID3D12CommandList* commandLists[] = { commandList };
 		CommandQueue->ExecuteCommandLists(1, commandLists);
@@ -569,6 +619,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//キューをクリア
 		result = commandAllocator->Reset();
 		assert(SUCCEEDED(result));
+
 		//再びコマンドリストを貯める準備
 		result = commandList->Reset(commandAllocator, nullptr);
 		assert(SUCCEEDED(result));
