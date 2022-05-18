@@ -3,6 +3,7 @@
 #include<cassert>
 #include<d3dcompiler.h>
 #include<DirectXMath.h>
+#include<math.h>
 using namespace DirectX;
 #pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib,"d3d12.lib")
@@ -15,7 +16,7 @@ using namespace DirectX;
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"dxguid.lib")
 
-
+const float PI = 3.141592f;
 //ウィンドウプロシージャ
 LRESULT WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	//メッセージに応じてゲーム固有の処理を行う
@@ -166,11 +167,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	swapChainDesc.BufferCount = 2; //バッファの数を2に設定
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; //フリップ後は破棄
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
 	//スワップチェーンの生成
 	result = dxgiFactory->CreateSwapChainForHwnd(
 		CommandQueue, hwnd, &swapChainDesc, nullptr, nullptr,
 		(IDXGISwapChain1**)&swapChain);
 	assert(SUCCEEDED(result));
+
 	//デスクリプタヒープの設定
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; //レンダーターゲットビュー
@@ -178,6 +181,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//デスクリプターヒープの生成
 	device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap));
+
 	//バックバッファ
 	std::vector<ID3D12Resource*>backBuffers;
 	backBuffers.resize(swapChainDesc.BufferCount);
@@ -228,6 +232,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//{-0.5f,+0.5f,0.0f},//左上
 		{+0.5f,+0.5f,0.0f},//右上
 	};
+
+	float transformX = 0.0f;
+	float transformY = 0.0f;
+	float rotation = 0.0f;
+	float scale = 1.0f;
+
+	float affin[3][3] = {//工程1
+		{1.0f, 0.0f, -100.0f},
+		{0.0f, 1.0f, -100.0f},
+		{0.0f, 0.0f, 1.0f}
+
+	};
 	//インデックスデータ
 	uint16_t indices[] = {
 		0,1,2,//三角形1つ目
@@ -266,10 +282,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	assert(SUCCEEDED(result));
 
-	//全頂点に対して
-	for (int i = 0; i < _countof(vertices); i++) {
-		vertMap[i] = vertices[i];//座標をコピー
-	}
+	
 
 	//繋がりを解除
 	vertBuff->Unmap(0, nullptr);
@@ -431,7 +444,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	struct ConstBufferDataMaterial {
 		XMFLOAT4 color;//色(RGBA)
 	};
-
+	
 	//ヒープ設定
 	D3D12_HEAP_PROPERTIES cbHeapProp{};
 	cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;//GPUへの転送用
@@ -504,6 +517,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeIB;
+
 	//ゲームループ
 	while (true) {
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -517,18 +531,87 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		
 		//DirectX毎フレーム処理　ここから
+#pragma region キーボード情報の取得
 		//キーボード情報の取得
 		keyboard->Acquire();
 
 		//全キーの入力状態を取得する
-		BYTE key[256] = {};
-		keyboard->GetDeviceState(sizeof(key), key);
+		BYTE keys[256] = {};
+		keyboard->GetDeviceState(sizeof(keys), keys);
+
+		transformX = 0.0f;
+		transformY = 0.0f;
+		rotation = 0.0f;
+		scale = 1.0f;
 
 		//数字の0キーが押されたら
-		if (key[DIK_0]) {
-			OutputDebugStringA("Hit 0\n");//出力ウィンドウに[Hit 0]と表示
+		//平行移動
+		if (keys[DIK_W]) 
+		{
+			transformY += 0.1f;
 		}
-		
+
+		if (keys[DIK_S])
+		{
+			transformY -= 0.1f;
+		}
+
+		if (keys[DIK_A])
+		{
+			transformX -= 0.1f;
+		}
+
+		if (keys[DIK_D])
+		{
+			transformX += 0.1f;
+		}
+
+		//拡大縮小
+		if (keys[DIK_Z])
+		{
+			scale += 0.1f;
+		}
+
+		if (keys[DIK_C])
+		{
+			scale -= 0.1f;
+		}
+
+		//回転
+		if (keys[DIK_Q])
+		{
+			rotation += PI / 32;
+		}
+		if (keys[DIK_E])
+		{
+			rotation -= PI / 32;
+		}
+		//アフィン行列の生成
+		affin[0][0] = scale * cos(rotation);
+		affin[0][1] = scale * -sin(rotation);
+		affin[0][2] = transformX;
+
+		affin[1][0] = scale * sin(rotation);
+		affin[1][1] = scale * cos(rotation);
+		affin[1][2] = transformY;
+
+		affin[2][0] = 0.0f;
+		affin[2][1] = 0.0f;
+		affin[2][2] = 1.0f;
+
+		//アフィン変換
+		for (int i=0; i < _countof(vertices); i++)
+		{
+			vertices[i].x = vertices[i].x * affin[0][0] + vertices[i].y * affin[0][1] + 1.0f * affin[0][2];
+			vertices[i].y = vertices[i].x * affin[1][0] + vertices[i].y * affin[1][1] + 1.0f * affin[1][2];
+			vertices[i].z = vertices[i].x * affin[2][0] + vertices[i].y * affin[2][1] + 1.0f * affin[2][2];
+		}
+
+		//全頂点に対して
+		for (int i = 0; i < _countof(vertices); i++) {
+			vertMap[i] = vertices[i];//座標をコピー
+		}
+#pragma endregion
 		//バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 
