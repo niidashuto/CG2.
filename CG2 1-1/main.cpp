@@ -223,15 +223,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//排他制御レベルのセット
 	result = keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
 	assert(SUCCEEDED(result));
-	//頂点データ
-	XMFLOAT3 vertices[] = {
-		{-0.5f,-0.5f,0.0f},//左下
-		{-0.5f,+0.5f,0.0f},//左上
-		{+0.5f,-0.5f,0.0f},//右下
-		//{+0.5f,-0.5f,0.0f},//右下
-		//{-0.5f,+0.5f,0.0f},//左上
-		{+0.5f,+0.5f,0.0f},//右上
+	struct Vertex
+	{
+		XMFLOAT3 pos;
+		XMFLOAT2 uv;
 	};
+	Vertex vertices[] = {
+		{{-0.4f,-0.7,0.0f},{0.0f,1.0f}},
+		{{-0.4f,+0.7f,0.0f},{0.0f,0.0f}},
+		{{+0.4f,-0.7f,0.0f},{1.0f,1.0f}},
+		{{+0.4f,+0.7f,0.0f},{1.0f,0.0f}}
+	};
+	//頂点データ
+	//XMFLOAT3 vertices[] = {
+	//	{-0.5f,-0.5f,0.0f},//左下
+	//	{-0.5f,+0.5f,0.0f},//左上
+	//	{+0.5f,-0.5f,0.0f},//右下
+	//	//{+0.5f,-0.5f,0.0f},//右下
+	//	//{-0.5f,+0.5f,0.0f},//左上
+	//	{+0.5f,+0.5f,0.0f},//右上
+	//};
 
 	float transformX = 0.0f;
 	float transformY = 0.0f;
@@ -245,12 +256,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	};
 	//インデックスデータ
-	uint16_t indices[] = {
+	unsigned short indices[] = {
 		0,1,2,//三角形1つ目
 		1,2,3,//三角形2つ目
 	};
 	//頂点データ全体のサイズ=頂点データ一つ分のサイズ*頂点データの要素数
-	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
+	UINT sizeVB = static_cast<UINT>(sizeof(vertices[0]) * _countof(vertices));
 
 	//頂点バッファの設定
 	D3D12_HEAP_PROPERTIES heapProp{};//ヒープ設定
@@ -602,14 +613,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//アフィン変換
 		for (int i=0; i < _countof(vertices); i++)
 		{
-			vertices[i].x = vertices[i].x * affin[0][0] + vertices[i].y * affin[0][1] + 1.0f * affin[0][2];
-			vertices[i].y = vertices[i].x * affin[1][0] + vertices[i].y * affin[1][1] + 1.0f * affin[1][2];
-			vertices[i].z = vertices[i].x * affin[2][0] + vertices[i].y * affin[2][1] + 1.0f * affin[2][2];
+			vertices[i].pos.x = vertices[i].pos.x * affin[0][0] + vertices[i].pos.y * affin[0][1] + 1.0f * affin[0][2];
+			vertices[i].pos.y = vertices[i].pos.x * affin[1][0] + vertices[i].pos.y * affin[1][1] + 1.0f * affin[1][2];
+			vertices[i].pos.z = vertices[i].pos.x * affin[2][0] + vertices[i].pos.y * affin[2][1] + 1.0f * affin[2][2];
 		}
 
 		//全頂点に対して
 		for (int i = 0; i < _countof(vertices); i++) {
-			vertMap[i] = vertices[i];//座標をコピー
+			vertMap[i] = vertices[i].pos;//座標をコピー
 		}
 #pragma endregion
 		//バックバッファの番号を取得(2つなので0番か1番)
