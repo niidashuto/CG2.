@@ -231,7 +231,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//インデックスデータ
 	uint16_t indices[] = {
 		0,1,2,//三角形1つ目
-		1,2,3,//三角形2つ目
+		//1,2,3,//三角形2つ目
 	};
 	//頂点データ全体のサイズ=頂点データ一つ分のサイズ*頂点データの要素数
 	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
