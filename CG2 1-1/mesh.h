@@ -18,16 +18,16 @@ using namespace DirectX;
 
 class Mesh {
 public:
-	Mesh();
-	~Mesh();
+	Mesh(ID3D12Device* device);
     void Draw(ID3D12GraphicsCommandList* commandList);
-	void Initialize(ID3D12Device* device);
-	void Update();
-public:
+	
+private:
 	HRESULT result;
 	D3D12_VERTEX_BUFFER_VIEW vbView{};
 	D3D12_INDEX_BUFFER_VIEW ibView{};
 	ID3D12Resource* constBuffMaterial;
 	ID3D12PipelineState* pipelineState;
-	uint16_t indices[];
+	//ルートシグネチャ
+	ID3D12RootSignature* rootSignature;
+	uint16_t indices[3];
 };

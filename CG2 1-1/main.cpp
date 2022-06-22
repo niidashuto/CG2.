@@ -220,8 +220,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	result = keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
 	assert(SUCCEEDED(result));
 
-	Mesh* mesh = new Mesh();
-	mesh->Initialize(device);
+	Mesh* mesh = new Mesh(device);
 	
 	////頂点データ
 	//XMFLOAT3 vertices[] = {
@@ -583,25 +582,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		commandList->ResourceBarrier(1, &barrierDesc);
 
-		//パイプラインステートとルートシグネチャの設定コマンド
-		commandList->SetPipelineState(pipelineState);
-		commandList->SetGraphicsRootSignature(rootSignature);
+		mesh->Draw(commandList);
+		////パイプラインステートとルートシグネチャの設定コマンド
+		//commandList->SetPipelineState(pipelineState);
+		//commandList->SetGraphicsRootSignature(rootSignature);
 
-		//プリミティブ型状の設定コマンド
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);//三角形リスト
-		
+		////プリミティブ型状の設定コマンド
+		//commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);//三角形リスト
+		//
 
-		//頂点バッファビューの設定コマンド
-		commandList->IASetVertexBuffers(0, 1, &vbView);
+		////頂点バッファビューの設定コマンド
+		//commandList->IASetVertexBuffers(0, 1, &vbView);
 
-		//インデックスバッファビューの設定コマンド
-		commandList->IASetIndexBuffer(&ibView);
+		////インデックスバッファビューの設定コマンド
+		//commandList->IASetIndexBuffer(&ibView);
 
-		//定数バッファビュー(CBV)の設定コマンド
-		commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
-		
-		//描画コマンド
-		commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0,0);//全ての頂点を使って描画
+		////定数バッファビュー(CBV)の設定コマンド
+		//commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
+		//
+		////描画コマンド
+		//commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0,0);//全ての頂点を使って描画
 
 		//命令のクローズ
 		result = commandList->Close();

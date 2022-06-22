@@ -15,10 +15,8 @@ using namespace DirectX;
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"dxguid.lib")
 #include"mesh.h"
-Mesh::Mesh() {
 
-};
-void Mesh::Initialize(ID3D12Device* device) {
+Mesh::Mesh(ID3D12Device* device) {
 	//頂点データ
 	XMFLOAT3 vertices[] = {
 		{-0.5f,-0.5f,0.0f},//左下
@@ -199,8 +197,7 @@ void Mesh::Initialize(ID3D12Device* device) {
 	rootParam.Descriptor.RegisterSpace = 0;//デフォルト値
 	rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;//全てのシェーダから見える
 
-	//ルートシグネチャ
-	ID3D12RootSignature* rootSignature;
+	
 
 	//ルートシグネチャの設定
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
@@ -301,16 +298,24 @@ void Mesh::Initialize(ID3D12Device* device) {
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeIB;
 }
-//void Mesh::Draw(ID3D12GraphicsCommandList* commandList) {
-//	//頂点バッファビューの設定コマンド
-//	commandList->IASetVertexBuffers(0, 1, &vbView);
-//
-//	//インデックスバッファビューの設定コマンド
-//	commandList->IASetIndexBuffer(&ibView);
-//
-//	//定数バッファビュー(CBV)の設定コマンド
-//	commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
-//
-//	//描画コマンド
-//	commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);//全ての頂点を使って描画
-//}
+void Mesh::Draw(ID3D12GraphicsCommandList* commandList) {
+	//パイプラインステートとルートシグネチャの設定コマンド
+	commandList->SetPipelineState(pipelineState);
+
+	commandList->SetGraphicsRootSignature(rootSignature);
+
+	//プリミティブ型状の設定コマンド
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);//三角形リスト
+
+	//頂点バッファビューの設定コマンド
+	commandList->IASetVertexBuffers(0, 1, &vbView);
+
+	//インデックスバッファビューの設定コマンド
+	commandList->IASetIndexBuffer(&ibView);
+
+	//定数バッファビュー(CBV)の設定コマンド
+	commandList->SetGraphicsRootConstantBufferView(0, constBuffMaterial->GetGPUVirtualAddress());
+
+	//描画コマンド
+	commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);//全ての頂点を使って描画
+}
