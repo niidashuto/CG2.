@@ -573,11 +573,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
-
+	//matWorldに単位行列を代入
 	matWorld = XMMatrixIdentity();
 
 	matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
-
+	//matRotに単位行列を代入
 	matRot = XMMatrixIdentity();
 
 	matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));//Z軸周りに0度回転
