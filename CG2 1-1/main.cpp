@@ -539,12 +539,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);//マッピング
 		assert(SUCCEEDED(result));
 	}
+	//座標
+	XMFLOAT3 position = { 0.0f,0.0f,0.0f };
+	//スケーリング倍率
+	//XMFLOAT3 scale = { 1.0f,1.0f,1.0f };
+	//回転角
+	//XMFLOAT3 rotation = { 0.0f,0.0f,0.0f };
+
 	//座標(0,0)を画面左上に合うようにするための計算(平行投影行列)
 	//単位行列を代入
-	constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
+	/*constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
 		0.0f,1280.0f,
 		720.0f,0.0f,
-		0.0f,1.0f);
+		0.0f,1.0f);*/
 	//透視投影変換行列の計算
 	XMMATRIX matprojection;
 
@@ -564,15 +571,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 
-	XMMATRIX matWorld;
+	XMMATRIX matWorld;//ワールド行列
 
-	matWorld = XMMatrixTranslation(0.0f,0.0f,0.0f);
+	matWorld = XMMatrixIdentity();
 
 	XMMATRIX matScale;//スケーリング行列
 
 	matScale = XMMatrixScaling(1.0f, 0.5f, 1.0f);
 
 	matWorld *= matScale;//ワールド行列にスケーリングを反映
+
+	XMMATRIX matRot;//回転行列
+
+	matRot = XMMatrixIdentity();
+
+	matRot *= XMMatrixRotationZ(XMConvertToRadians(0.0f));//Z軸周りに45度回転
+	matRot *= XMMatrixRotationX(XMConvertToRadians(15.0f));
+	matRot *= XMMatrixRotationY(XMConvertToRadians(30.0f));
+
+	matWorld *= matRot;
+
+	XMMATRIX matTrans = XMMatrixTranslation(-50.0f, 0.0f, 0.0f);//(-50,0,0)平行移動
+
+	matWorld *= matTrans;
+
+	
 
 	constMapTransform->mat = matWorld * matview * matprojection;
 	//ヒープ設定
@@ -789,72 +812,84 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			
 		}
-		constMapTransform->mat = matview * matprojection;
+		if (keys[DIK_UP] || keys[DIK_DOWN] || keys[DIK_RIGHT] || keys[DIK_LEFT])
+		{
+			//座標を移動する処理
+			if (keys[DIK_UP]) { position.z += 0.5f; }
+			else if (keys[DIK_DOWN]) { position.z -= 0.5f; }
+			if (keys[DIK_RIGHT]) { position.x += 0.5f; }
+			else if (keys[DIK_LEFT]) { position.x -= 0.5f; }
+		}
+		XMMATRIX matTrans;
+		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+		matWorld *= matTrans;
+
+		constMapTransform->mat = matWorld * matview * matprojection;
 		result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);//マッピング
 		assert(SUCCEEDED(result));
 
-		//数字の0キーが押されたら
-		//平行移動
-		if (keys[DIK_W])
-		{
-			transformY += 0.1f;
-		}
+		////数字の0キーが押されたら
+		////平行移動
+		//if (keys[DIK_W])
+		//{
+		//	transformY += 0.1f;
+		//}
 
-		if (keys[DIK_S])
-		{
-			transformY -= 0.1f;
-		}
+		//if (keys[DIK_S])
+		//{
+		//	transformY -= 0.1f;
+		//}
 
-		if (keys[DIK_A])
-		{
-			transformX -= 0.1f;
-		}
+		//if (keys[DIK_A])
+		//{
+		//	transformX -= 0.1f;
+		//}
 
-		if (keys[DIK_D])
-		{
-			transformX += 0.1f;
-		}
+		//if (keys[DIK_D])
+		//{
+		//	transformX += 0.1f;
+		//}
 
-		//拡大縮小
-		if (keys[DIK_Z])
-		{
-			scale += 0.1f;
-		}
+		////拡大縮小
+		//if (keys[DIK_Z])
+		//{
+		//	scale += 0.1f;
+		//}
 
-		if (keys[DIK_C])
-		{
-			scale -= 0.1f;
-		}
+		//if (keys[DIK_C])
+		//{
+		//	scale -= 0.1f;
+		//}
 
-		//回転
-		if (keys[DIK_Q])
-		{
-			rotation += PI / 32;
-		}
-		if (keys[DIK_E])
-		{
-			rotation -= PI / 32;
-		}
-		//アフィン行列の生成
-		affin[0][0] = scale * cos(rotation);
-		affin[0][1] = scale * -sin(rotation);
-		affin[0][2] = transformX;
+		////回転
+		//if (keys[DIK_Q])
+		//{
+		//	rotation += PI / 32;
+		//}
+		//if (keys[DIK_E])
+		//{
+		//	rotation -= PI / 32;
+		//}
+		////アフィン行列の生成
+		//affin[0][0] = scale * cos(rotation);
+		//affin[0][1] = scale * -sin(rotation);
+		//affin[0][2] = transformX;
 
-		affin[1][0] = scale * sin(rotation);
-		affin[1][1] = scale * cos(rotation);
-		affin[1][2] = transformY;
+		//affin[1][0] = scale * sin(rotation);
+		//affin[1][1] = scale * cos(rotation);
+		//affin[1][2] = transformY;
 
-		affin[2][0] = 0.0f;
-		affin[2][1] = 0.0f;
-		affin[2][2] = 1.0f;
+		//affin[2][0] = 0.0f;
+		//affin[2][1] = 0.0f;
+		//affin[2][2] = 1.0f;
 
-		//アフィン変換
-		for (int i = 0; i < _countof(vertices); i++)
-		{
-			vertices[i].pos.x = vertices[i].pos.x * affin[0][0] + vertices[i].pos.y * affin[0][1] + 1.0f * affin[0][2];
-			vertices[i].pos.y = vertices[i].pos.x * affin[1][0] + vertices[i].pos.y * affin[1][1] + 1.0f * affin[1][2];
-			vertices[i].pos.z = vertices[i].pos.x * affin[2][0] + vertices[i].pos.y * affin[2][1] + 1.0f * affin[2][2];
-		}
+		////アフィン変換
+		//for (int i = 0; i < _countof(vertices); i++)
+		//{
+		//	vertices[i].pos.x = vertices[i].pos.x * affin[0][0] + vertices[i].pos.y * affin[0][1] + 1.0f * affin[0][2];
+		//	vertices[i].pos.y = vertices[i].pos.x * affin[1][0] + vertices[i].pos.y * affin[1][1] + 1.0f * affin[1][2];
+		//	vertices[i].pos.z = vertices[i].pos.x * affin[2][0] + vertices[i].pos.y * affin[2][1] + 1.0f * affin[2][2];
+		//}
 
 		//全頂点に対して
 		for (int i = 0; i < _countof(vertices); i++) {
