@@ -262,8 +262,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	float transformX = 0.0f;
 	float transformY = 0.0f;
-	float rotation = 0.0f;
-	float scale = 1.0f;
+	
 
 	float affin[3][3] = {//工程1
 		{1.0f, 0.0f, -100.0f},
@@ -542,9 +541,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//座標
 	XMFLOAT3 position = { 0.0f,0.0f,0.0f };
 	//スケーリング倍率
-	//XMFLOAT3 scale = { 1.0f,1.0f,1.0f };
+	XMFLOAT3 scale = { 1.0f,1.0f,1.0f };
 	//回転角
-	//XMFLOAT3 rotation = { 0.0f,0.0f,0.0f };
+	XMFLOAT3 rotation = { 15.0f,30.0f,0.0f };
 
 	//座標(0,0)を画面左上に合うようにするための計算(平行投影行列)
 	//単位行列を代入
@@ -554,14 +553,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		0.0f,1.0f);*/
 	//透視投影変換行列の計算
 	XMMATRIX matprojection;
-
-	matprojection=constMapTransform->mat = XMMatrixPerspectiveFovLH(
-		XMConvertToRadians(45.0f),//上下画角45度
-		(float)1280.0f / 720.0f,//アスペクト比(画面横幅/画面縦幅)
-		0.1f, 1000.0f//前端,奥端
-	);
 	//ビュー変換行列
 	XMMATRIX matview;
+	XMMATRIX matWorld;//ワールド行列
+	XMMATRIX matScale;//スケーリング行列
+	XMMATRIX matRot;//回転行列
+	XMMATRIX matTrans = XMMatrixTranslation(-50.0f, 0.0f, 0.0f);//(-50,0,0)平行移動
 
 	XMFLOAT3 eye(0, 0, -100.0f);//視点座標
 	XMFLOAT3 target(0, 0, 0);//注視点座標
@@ -569,33 +566,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	float angle = 0.0f;//カメラの回転角
 
-	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	matprojection = constMapTransform->mat = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0f),//上下画角45度
+		(float)1280.0f / 720.0f,//アスペクト比(画面横幅/画面縦幅)
+		0.1f, 1000.0f//前端,奥端
+	);
 
-	XMMATRIX matWorld;//ワールド行列
+	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 
 	matWorld = XMMatrixIdentity();
 
-	XMMATRIX matScale;//スケーリング行列
-
-	matScale = XMMatrixScaling(1.0f, 0.5f, 1.0f);
-
-	matWorld *= matScale;//ワールド行列にスケーリングを反映
-
-	XMMATRIX matRot;//回転行列
+	matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
 
 	matRot = XMMatrixIdentity();
 
-	matRot *= XMMatrixRotationZ(XMConvertToRadians(0.0f));//Z軸周りに45度回転
-	matRot *= XMMatrixRotationX(XMConvertToRadians(15.0f));
-	matRot *= XMMatrixRotationY(XMConvertToRadians(30.0f));
+	matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));//Z軸周りに0度回転
+	matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));//X軸周りに15度回転
+	matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));//Y軸周りに30度回転
 
-	matWorld *= matRot;
+	matWorld *= matScale;//ワールド行列にスケーリングを反映
+	matWorld *= matRot;//ワールド行列に回転を反映
+	matWorld *= matTrans;//ワールド行列に平行移動を反映
 
-	XMMATRIX matTrans = XMMatrixTranslation(-50.0f, 0.0f, 0.0f);//(-50,0,0)平行移動
-
-	matWorld *= matTrans;
-
-	
 
 	constMapTransform->mat = matWorld * matview * matprojection;
 	//ヒープ設定
@@ -794,8 +786,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		transformX = 0.0f;
 		transformY = 0.0f;
-		rotation = 0.0f;
-		scale = 1.0f;
+		
 
 		
 
@@ -828,68 +819,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);//マッピング
 		assert(SUCCEEDED(result));
 
-		////数字の0キーが押されたら
-		////平行移動
-		//if (keys[DIK_W])
-		//{
-		//	transformY += 0.1f;
-		//}
-
-		//if (keys[DIK_S])
-		//{
-		//	transformY -= 0.1f;
-		//}
-
-		//if (keys[DIK_A])
-		//{
-		//	transformX -= 0.1f;
-		//}
-
-		//if (keys[DIK_D])
-		//{
-		//	transformX += 0.1f;
-		//}
-
-		////拡大縮小
-		//if (keys[DIK_Z])
-		//{
-		//	scale += 0.1f;
-		//}
-
-		//if (keys[DIK_C])
-		//{
-		//	scale -= 0.1f;
-		//}
-
-		////回転
-		//if (keys[DIK_Q])
-		//{
-		//	rotation += PI / 32;
-		//}
-		//if (keys[DIK_E])
-		//{
-		//	rotation -= PI / 32;
-		//}
-		////アフィン行列の生成
-		//affin[0][0] = scale * cos(rotation);
-		//affin[0][1] = scale * -sin(rotation);
-		//affin[0][2] = transformX;
-
-		//affin[1][0] = scale * sin(rotation);
-		//affin[1][1] = scale * cos(rotation);
-		//affin[1][2] = transformY;
-
-		//affin[2][0] = 0.0f;
-		//affin[2][1] = 0.0f;
-		//affin[2][2] = 1.0f;
-
-		////アフィン変換
-		//for (int i = 0; i < _countof(vertices); i++)
-		//{
-		//	vertices[i].pos.x = vertices[i].pos.x * affin[0][0] + vertices[i].pos.y * affin[0][1] + 1.0f * affin[0][2];
-		//	vertices[i].pos.y = vertices[i].pos.x * affin[1][0] + vertices[i].pos.y * affin[1][1] + 1.0f * affin[1][2];
-		//	vertices[i].pos.z = vertices[i].pos.x * affin[2][0] + vertices[i].pos.y * affin[2][1] + 1.0f * affin[2][2];
-		//}
+		
 
 		//全頂点に対して
 		for (int i = 0; i < _countof(vertices); i++) {
