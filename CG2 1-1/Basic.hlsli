@@ -10,7 +10,9 @@ cbuffer ConstBufferDataTransform:register(b1)
 
 struct VSOutput
 {
-	float4 svpos:SV_POSITION;
+	float4 svpos:SV_POSITION;//システム用頂点座標
 
-	float2 uv:TEXCOORD;
+	float3 normal:NORMAL;//法線ベクトル
+
+	float2 uv:TEXCOORD;//uv座標
 };
