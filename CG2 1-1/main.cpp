@@ -17,6 +17,8 @@ using namespace DirectX;
 #pragma comment(lib, "dxguid.lib")
 #include "wrl.h"
 using namespace Microsoft::WRL;
+#include<random>
+
 
 // ウィンドウプロシージャ
 LRESULT WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -355,16 +357,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{{5.0f, 5.0f, -5.0f},{}, {1.0f, 1.0f}}, // 右下
 
 		//下
-		{{-5.0f,-5.0f, -5.0f}, {},{0.0f, 1.0f}}, // 左下
-		{{-5.0f, -5.0f, 5.0f}, {},{0.0f, 0.0f}}, // 左上
-		{{5.0f, -5.0f, -5.0f},{}, {1.0f, 1.0f}}, // 右下
-		{{5.0f, -5.0f, 5.0f}, {},{1.0f, 0.0f}}, // 右上
+		{{-5.0f,5.0f, -5.0f}, {},{0.0f, 1.0f}}, // 左下
+		{{-5.0f, 5.0f, 5.0f}, {},{0.0f, 0.0f}}, // 左上
+		{{5.0f, 5.0f, -5.0f},{}, {1.0f, 1.0f}}, // 右下
+		{{5.0f, 5.0f, 5.0f}, {},{1.0f, 0.0f}}, // 右上
 
 		//上
-		{{-5.0f, 5.0f, 5.0f},{}, {0.0f, 0.0f}}, // 左上
-		{{-5.0f,5.0f, -5.0f}, {},{0.0f, 1.0f}}, // 左下
-		{{5.0f, 5.0f, 5.0f}, {},{1.0f, 0.0f}}, // 右上
-		{{5.0f, 5.0f, -5.0f},{}, {1.0f, 1.0f}}, // 右下
+		{{-5.0f, -5.0f, 5.0f},{}, {0.0f, 0.0f}}, // 左上
+		{{-5.0f,-5.0f, -5.0f}, {},{0.0f, 1.0f}}, // 左下
+		{{5.0f, -5.0f, 5.0f}, {},{1.0f, 0.0f}}, // 右上
+		{{5.0f, -5.0f, -5.0f},{}, {1.0f, 1.0f}}, // 右下
 
 	};
 
@@ -616,6 +618,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//3dオブジェクトの配列
 	Object3d object3ds[kObjectCount];
 
+	std::random_device seed_gen;
+	std::mt19937_64 engine(seed_gen());
+	std::uniform_real_distribution<float>ranx(-60, 60);
+	std::uniform_real_distribution<float>rany(-60, 60);
+	std::uniform_real_distribution<float>ranz(-60, 60);
 	//配列内の全オブジェクトに対して
 	for (int i = 0; i < _countof(object3ds); i++) {
 		//初期化
@@ -624,11 +631,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//先頭以外なら
 		if (i > 0) {
 			//ひとつ前のオブジェクトを親オブジェクトとする
-			object3ds[i].parent = &object3ds[i - 1];
-
+			//object3ds[i].parent = &object3ds[i - 1];
+			float randomx = ranx(engine);
+			float randomy = rany(engine);
+			float randomz = ranz(engine);
 			object3ds[i].scale = { 0.9f, 0.9f, 0.9f };
-			object3ds[i].rotation = { 0.0f,0.0f,30.0f };
-			object3ds[i].position = { 0.0f,0.0f,-8.0f };
+			object3ds[i].rotation = { XMConvertToRadians(randomx),XMConvertToRadians(randomy),XMConvertToRadians(randomz) };
+			object3ds[i].position = { randomx,randomy,randomz };
 		}
 	}
 
@@ -664,7 +673,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// 値を書き込むと自動的に転送される
-	constMapMaterial->color = XMFLOAT4(1, 1, 1, 0.5f);              // RGBAで半透明の赤
+	constMapMaterial->color = XMFLOAT4(1, 1, 1, 1);              // RGBAで半透明の赤
 
 	//画像ファイルの用意
 
@@ -914,15 +923,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_RENDER_TARGET_BLEND_DESC& blenddesc = pipelineDesc.BlendState.RenderTarget[0];
 	blenddesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // RBGA全てのチャンネルを描画
 
-	//blenddesc.BlendEnable = true;                   // ブレンドを有効にする
-	//blenddesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;    // 加算
-	//blenddesc.SrcBlendAlpha = D3D12_BLEND_ONE;      // ソースの値を100% 使う
-	//blenddesc.DestBlendAlpha = D3D12_BLEND_ZERO;    // デストの値を  0% 使う
+	blenddesc.BlendEnable = true;                   // ブレンドを有効にする
+	blenddesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;    // 加算
+	blenddesc.SrcBlendAlpha = D3D12_BLEND_ONE;      // ソースの値を100% 使う
+	blenddesc.DestBlendAlpha = D3D12_BLEND_ZERO;    // デストの値を  0% 使う
 
-	//// 半透明合成
-	//blenddesc.BlendOp = D3D12_BLEND_OP_ADD;             // 加算
-	//blenddesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;         // ソースのアルファ値
-	//blenddesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;    // 1.0f-ソースのアルファ値
+	// 半透明合成
+	blenddesc.BlendOp = D3D12_BLEND_OP_ADD;             // 加算
+	blenddesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;         // ソースのアルファ値
+	blenddesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;    // 1.0f-ソースのアルファ値
 
 	// 頂点レイアウトの設定
 	pipelineDesc.InputLayout.pInputElementDescs = inputLayout;
