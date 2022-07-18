@@ -19,6 +19,8 @@ using namespace DirectX;
 using namespace Microsoft::WRL;
 #include<random>
 
+#include <DXGIDebug.h>
+
 
 // ウィンドウプロシージャ
 LRESULT WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -62,11 +64,11 @@ struct Object3d {
 };
 
 //3Dオブジェクト初期化
-void InitializeObject3d(Object3d* object, ComPtr<ID3D12Device> device);
+void InitializeObject3d(Object3d* object, ID3D12Device* device);
 
 void UpdateObject3d(Object3d* object, XMMATRIX& matView, XMMATRIX& matProjection);
 
-void DrawObject3d(Object3d* object, ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices);
+void DrawObject3d(Object3d* object, ID3D12GraphicsCommandList* commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices);
 
 
 
@@ -673,7 +675,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// 値を書き込むと自動的に転送される
-	constMapMaterial->color = XMFLOAT4(1, 1, 1, 1);              // RGBAで半透明の赤
+	constMapMaterial->color = XMFLOAT4(1, 1, 1, 1);// RGBAで半透明の赤
 
 	//画像ファイルの用意
 
@@ -994,6 +996,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		// ✖ボタンで終了メッセージが来たらゲームループを抜ける
 		if (msg.message == WM_QUIT) {
+			IDXGIDebug *pDxgiDebug;
+			typedef HRESULT(__stdcall* fPtr)(const IID&, void**);
+			HMODULE hDll = GetModuleHandleW(L"dxgidebug.dll");
+			fPtr DXGIGetDebugInterface = (fPtr)GetProcAddress(hDll, "DXGIGetDebugInterface");
+
+			DXGIGetDebugInterface(__uuidof(IDXGIDebug), (void**)&pDxgiDebug);
+
+			// 出力
+			pDxgiDebug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_DETAIL);
+
 			break;
 		}
 		// DirectX毎フレーム処理 ここから
@@ -1159,7 +1171,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 		// キューをクリア
-		result = commandAllocator->Reset();
+		result = commandAllocator.Get()->Reset();
 		assert(SUCCEEDED(result));
 		// 再びコマンドリストを貯める準備
 		result = commandList->Reset(commandAllocator.Get(), nullptr);
@@ -1179,7 +1191,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 }
 
 //オブジェクト初期化処理
-void InitializeObject3d(Object3d* object, ComPtr<ID3D12Device> device) {
+void InitializeObject3d(Object3d* object, ID3D12Device* device) {
 
 	HRESULT result;
 
@@ -1241,7 +1253,7 @@ void UpdateObject3d(Object3d* object, XMMATRIX& matView, XMMATRIX& matProjection
 }
 
 //オブジェクト描画処理
-void DrawObject3d(Object3d* object, ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices) {
+void DrawObject3d(Object3d* object, ID3D12GraphicsCommandList *commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices) {
 
 	// 頂点バッファビューの設定コマンド
 	commandList->IASetVertexBuffers(0, 1, &vbView);
