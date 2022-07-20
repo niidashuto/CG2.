@@ -64,11 +64,11 @@ struct Object3d {
 };
 
 //3Dオブジェクト初期化
-void InitializeObject3d(Object3d* object, ID3D12Device* device);
+void InitializeObject3d(Object3d* object, ComPtr<ID3D12Device> device);
 
 void UpdateObject3d(Object3d* object, XMMATRIX& matView, XMMATRIX& matProjection);
 
-void DrawObject3d(Object3d* object, ID3D12GraphicsCommandList* commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices);
+void DrawObject3d(Object3d* object, ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices);
 
 
 
@@ -1171,7 +1171,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 		// キューをクリア
-		result = commandAllocator.Get()->Reset();
+		result = commandAllocator->Reset();
 		assert(SUCCEEDED(result));
 		// 再びコマンドリストを貯める準備
 		result = commandList->Reset(commandAllocator.Get(), nullptr);
@@ -1191,7 +1191,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 }
 
 //オブジェクト初期化処理
-void InitializeObject3d(Object3d* object, ID3D12Device* device) {
+void InitializeObject3d(Object3d* object, ComPtr<ID3D12Device> device) {
 
 	HRESULT result;
 
@@ -1208,6 +1208,7 @@ void InitializeObject3d(Object3d* object, ID3D12Device* device) {
 	resdesc.SampleDesc.Count = 1;
 	resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
+	
 	// 定数バッファの生成
 	result = device->CreateCommittedResource(
 		&cbHeapProp, // ヒープ設定
@@ -1253,7 +1254,7 @@ void UpdateObject3d(Object3d* object, XMMATRIX& matView, XMMATRIX& matProjection
 }
 
 //オブジェクト描画処理
-void DrawObject3d(Object3d* object, ID3D12GraphicsCommandList *commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices) {
+void DrawObject3d(Object3d* object, ComPtr<ID3D12GraphicsCommandList>commandList, D3D12_VERTEX_BUFFER_VIEW& vbView, D3D12_INDEX_BUFFER_VIEW& ibView, UINT numIndices) {
 
 	// 頂点バッファビューの設定コマンド
 	commandList->IASetVertexBuffers(0, 1, &vbView);
