@@ -504,6 +504,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeIB;
+
+	float r = 1.0f;
+	float g = 0.0f;
+	float b = 0.0f;
 	//ゲームループ
 	while (true) {
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -529,6 +533,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			OutputDebugStringA("Hit 0\n");//出力ウィンドウに[Hit 0]と表示
 		}
 		
+		
+
+		//値を書き込むと自動的に転送される
+		constMapMaterial->color = XMFLOAT4(r, g, b, 0.5f);
+
+		r -= 0.01f;
+
+		if (r <= 0.0f)
+		{
+			r = 1.0f;
+		}
+
+		g += 0.01f;
+
+		if (g >= 1.0f)
+		{
+			g = 0.0f;
+		}
+
 		//バックバッファの番号を取得(2つなので0番か1番)
 		UINT bbIndex = swapChain->GetCurrentBackBufferIndex();
 
