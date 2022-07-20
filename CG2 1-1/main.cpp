@@ -432,6 +432,95 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		XMFLOAT4 color;//色(RGBA)
 	};
 
+	struct ConstBufferDataTransform {
+		XMMATRIX mat; //3D変換行列
+	};
+
+	ID3D12Resource*constBuffTransform;
+	ConstBufferDataTransform* constMapTransform = nullptr;
+	{
+		//ヒープ設定
+		D3D12_HEAP_PROPERTIES cbHeapProp{};
+		cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;//GPUへの転送用
+
+		//リソース設定
+		D3D12_RESOURCE_DESC cbResourceDesc{};
+		cbResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		cbResourceDesc.Width = (sizeof(ConstBufferDataTransform) + 0xff) & ~0xff;
+		cbResourceDesc.Height = 1;
+		cbResourceDesc.DepthOrArraySize = 1;
+		cbResourceDesc.MipLevels = 1;
+		cbResourceDesc.SampleDesc.Count = 1;
+		cbResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		//定数バッファの生成
+		result = device->CreateCommittedResource(
+			&cbHeapProp,//ヒープ設定
+			D3D12_HEAP_FLAG_NONE,
+			&cbResourceDesc,//リソース設定
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&constBuffTransform));
+		assert(SUCCEEDED(result));
+
+		//定数バッファのマッピング
+		result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);//マッピング
+		assert(SUCCEEDED(result));
+	}
+
+	//座標
+	XMFLOAT3 position = { 0.0f,0.0f,0.0f };
+	//スケーリング倍率
+	XMFLOAT3 scale = { 1.0f,1.0f,1.0f };
+	//回転角
+	XMFLOAT3 rotation = { 15.0f,30.0f,0.0f };
+
+	//座標(0,0)を画面左上に合うようにするための計算(平行投影行列)
+	//単位行列を代入
+	/*constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
+		0.0f,1280.0f,
+		720.0f,0.0f,
+		0.0f,1.0f);*/
+		//透視投影変換行列の計算
+	XMMATRIX matprojection;
+	//ビュー変換行列
+	XMMATRIX matview;
+	XMMATRIX matWorld;//ワールド行列
+	XMMATRIX matScale;//スケーリング行列
+	XMMATRIX matRot;//回転行列
+	XMMATRIX matTrans = XMMatrixTranslation(-50.0f, 0.0f, 0.0f);//(-50,0,0)平行移動
+
+	XMFLOAT3 eye(0, 0, -100.0f);//視点座標
+	XMFLOAT3 target(0, 0, 0);//注視点座標
+	XMFLOAT3 up(0, 1, 0);//上方向ベクトル
+
+	float angle = 0.0f;//カメラの回転角
+
+	matprojection = constMapTransform->mat = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0f),//上下画角45度
+		(float)1280.0f / 720.0f,//アスペクト比(画面横幅/画面縦幅)
+		0.1f, 1000.0f//前端,奥端
+	);
+
+	matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	//matWorldに単位行列を代入
+	matWorld = XMMatrixIdentity();
+
+	matScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+	//matRotに単位行列を代入
+	matRot = XMMatrixIdentity();
+
+	matRot *= XMMatrixRotationZ(XMConvertToRadians(rotation.z));//Z軸周りに0度回転
+	matRot *= XMMatrixRotationX(XMConvertToRadians(rotation.x));//X軸周りに15度回転
+	matRot *= XMMatrixRotationY(XMConvertToRadians(rotation.y));//Y軸周りに30度回転
+
+	matWorld *= matScale;//ワールド行列にスケーリングを反映
+	matWorld *= matRot;//ワールド行列に回転を反映
+	matWorld *= matTrans;//ワールド行列に平行移動を反映
+
+
+	constMapTransform->mat = matWorld * matview * matprojection;
+
 	//ヒープ設定
 	D3D12_HEAP_PROPERTIES cbHeapProp{};
 	cbHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;//GPUへの転送用
@@ -550,6 +639,48 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (g >= 1.0f)
 		{
 			g = 0.0f;
+		}
+
+		//transformX = 0.0f;
+		//transformY = 0.0f;
+
+
+
+
+		if (key[DIK_L] || key[DIK_J])
+		{
+			if (key[DIK_L]) { angle += XMConvertToRadians(1.0f); }
+			else if (key[DIK_J]) { angle -= XMConvertToRadians(1.0f); }
+
+			//angleラジアンだけY軸周りに回転。半径は-100
+			eye.x = -100 * sinf(angle);
+			eye.z = -100 * cosf(angle);
+
+			matview = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+
+
+		}
+		if (key[DIK_UP] || key[DIK_DOWN] || key[DIK_RIGHT] || key[DIK_LEFT])
+		{
+			//座標を移動する処理
+			if (key[DIK_UP]) { position.z += 0.5f; }
+			else if (key[DIK_DOWN]) { position.z -= 0.5f; }
+			if (key[DIK_RIGHT]) { position.x += 0.5f; }
+			else if (key[DIK_LEFT]) { position.x -= 0.5f; }
+		}
+		XMMATRIX matTrans;
+		matTrans = XMMatrixTranslation(position.x, position.y, position.z);
+		matWorld *= matTrans;
+
+		constMapTransform->mat = matWorld * matview * matprojection;
+		result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);//マッピング
+		assert(SUCCEEDED(result));
+
+
+
+		//全頂点に対して
+		for (int i = 0; i < _countof(vertices); i++) {
+			vertMap[i] = vertices[i];//座標をコピー
 		}
 
 		//バックバッファの番号を取得(2つなので0番か1番)
